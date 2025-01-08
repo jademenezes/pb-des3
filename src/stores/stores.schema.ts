@@ -1,9 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-
-enum storeType {
-  PDV = 'PDV',
-  Loja = 'Loja',
-}
+import { storeType } from './enums/store-type.enums';
 
 @Schema()
 export class Store {
@@ -23,13 +19,7 @@ export class Store {
   longitude: string;
 
   @Prop({ required: true })
-  address1: string;
-
-  @Prop()
-  address2: string;
-
-  @Prop()
-  address3: string;
+  address: string;
 
   @Prop({ required: true })
   city: string;
