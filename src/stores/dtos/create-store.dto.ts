@@ -18,11 +18,13 @@ export class CreateStoreDto {
   @MaxLength(50)
   storeName: string;
 
+  @IsOptional()
   @IsBoolean()
-  takeOutInStore: boolean;
+  takeOutInStore?: boolean;
 
+  @IsOptional()
   @IsNumber()
-  shippingTimeInDays: number;
+  shippingTimeInDays?: number;
 
   @IsLatitude()
   latitude: string;
