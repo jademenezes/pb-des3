@@ -17,57 +17,57 @@ export class UpdateStoreDto {
   @IsString()
   @MinLength(5)
   @MaxLength(50)
-  storeName: string;
+  storeName?: string;
 
   @IsOptional()
   @IsBoolean()
-  takeOutInStore: boolean;
+  takeOutInStore?: boolean;
 
   @IsOptional()
   @IsNumber()
-  shippingTimeInDays: number;
+  shippingTimeInDays?: number;
 
   @IsOptional()
   @IsLatitude()
-  latitude: string;
+  latitude?: string;
 
   @IsOptional()
   @IsLongitude()
-  longitude: string;
+  longitude?: string;
 
   @IsOptional()
   @IsString()
   @MinLength(7)
   @MaxLength(50)
-  address: string;
+  address?: string;
 
   @IsOptional()
   @IsString()
-  city: string;
+  city?: string;
 
   @IsOptional()
   @IsString()
-  state: string;
+  state?: string;
 
   @IsOptional()
   @IsString()
-  type: storeType;
+  type?: storeType;
 
   @IsOptional()
   @IsString()
-  country: string;
+  country?: string;
 
   @IsOptional()
   @IsString()
   @Length(8)
-  postalCode: string;
+  postalCode?: string;
 
   @IsString()
   @Length(11)
   @IsOptional()
-  telephoneNumber: string;
+  telephoneNumber?: string;
 
   @IsEmail()
   @IsOptional()
-  emailAddress: string;
+  emailAddress?: string;
 }

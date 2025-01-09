@@ -44,6 +44,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error = 'Conflict';
     }
 
+    // Tratando erros de validação do mongoose
+    if (exception instanceof Error && exception.name === 'ValidationError') {
+      statusCode = 400;
+      message = Object.values(exception['errors'])
+        .map((err: any) => `${err.message}`)
+        .join(';');
+      error = 'Validation Error';
+    }
+
     // Padronizando a resposta de erro
     const errorResponse = {
       statusCode,
