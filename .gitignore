@@ -43,6 +43,12 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# eslint
+.eslintrc.*
+
+# http request files
+*.http
+
 # temp directory
 .temp
 .tmp
