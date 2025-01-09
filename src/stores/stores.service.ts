@@ -16,7 +16,9 @@ export class StoresService {
 
   // Método para criar uma loja no BD
   async createOne(createStoreDto: CreateStoreDto) {
+    // console.log('Service DTO:', createStoreDto);
     const newStore = new this.storeModel(createStoreDto);
+    // console.log(newStore);
 
     if (!newStore) {
       throw new BadRequestException('Could not create store on the database');
@@ -64,6 +66,7 @@ export class StoresService {
     return updatedStore;
   }
 
+  // Método para deletar uma loja do BD
   async deleteOne(id: string) {
     return await this.storeModel.findByIdAndDelete(id);
   }
