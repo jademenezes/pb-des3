@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Store } from './stores.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 
@@ -40,10 +40,14 @@ export class StoresService {
 
   // Retorna uma loja com determinada ID
   async getOneById(id: string) {
+    // Verifica se o parâmetro ID enviado é em um formato válido para MongoDB
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format!');
+    }
     const store = await this.storeModel.findById(id);
 
     if (!store) {
-      throw new NotFoundException('Could not find a store with this ID');
+      throw new NotFoundException('Could not find a store with this ID!');
     }
 
     return store;
@@ -60,7 +64,7 @@ export class StoresService {
     );
 
     if (!updatedStore) {
-      throw new NotFoundException('Could not find a store with this ID');
+      throw new NotFoundException('Could not find a store with this ID!');
     }
 
     return updatedStore;
