@@ -29,7 +29,10 @@ export class StoresController {
   }
 
   // Define a rota para buscar as lojas em um raio de 100KM de um determinado CEP
-  storesByCep() {}
+  @Get(':postalCode')
+  storesByCep(@Param('postalCode') postalCode: string) {
+    return this.storesService.getStoresByPostalCode(postalCode);
+  }
 
   // Define a rota que lista 1 loja com determinado ID
   @Get(':id')
