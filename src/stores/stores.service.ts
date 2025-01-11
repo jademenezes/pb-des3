@@ -28,14 +28,37 @@ export class StoresService {
   }
 
   // Retorna uma lista com todas as lojas no BD
-  async getAll() {
-    const storeList = await this.storeModel.find();
+  async getAll(limit: number, page: number) {
+    // Organiza valores de paginação
+    if (!limit) {
+      limit = 1;
+    }
 
-    if (!storeList) {
+    if (!page) {
+      page = 1;
+    }
+    limit = Math.max(1, limit);
+    page = Math.max(1, page);
+    const offset = (page - 1) * limit;
+
+    // Retorna o total de documentos no BD
+    const total = await this.storeModel.countDocuments();
+
+    // Busca a lista lojas do BD
+    const stores = await this.storeModel.find().skip(offset).limit(limit);
+
+    if (!stores) {
       throw new NotFoundException('Could not find stores on the database');
     }
 
-    return storeList;
+    const response = {
+      stores,
+      limit,
+      page,
+      total,
+    };
+
+    return response;
   }
 
   // Retorna uma loja com determinada ID
@@ -52,6 +75,8 @@ export class StoresService {
 
     return store;
   }
+
+  getStoresByCep() {}
 
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
   async updateOne(id: string, body: UpdateStoreDto) {
