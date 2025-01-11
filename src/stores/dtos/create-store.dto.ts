@@ -3,6 +3,8 @@ import {
   IsEmail,
   IsLatitude,
   IsLongitude,
+  IsNotEmpty,
+  IsNotEmptyObject,
   IsNumber,
   IsOptional,
   IsString,
@@ -31,6 +33,12 @@ export class CreateStoreDto {
 
   @IsLongitude()
   longitude: string;
+
+  @IsNotEmptyObject()
+  location: {
+    type: string;
+    coordinates: number[];
+  };
 
   @IsString()
   @MinLength(7)
