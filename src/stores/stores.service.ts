@@ -10,15 +10,31 @@ import { Model, Types } from 'mongoose';
 import { CreateStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 import axios from 'axios';
+import { PositionDto } from './dtos/position.dto';
 
 @Injectable()
 export class StoresService {
   // Injetar modelo Store
   constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
 
+  private cleanPostalCode(postalCode: string) {
+    const cleanedPostalCode = postalCode.replace(/\D/g, '');
+    if (cleanedPostalCode.length != 8) {
+      throw new BadRequestException('Invalid postal code!');
+    }
+
+    return cleanedPostalCode;
+  }
+
   // Método para criar uma loja no BD
   async createOne(createStoreDto: CreateStoreDto) {
-    // console.log('Service DTO:', createStoreDto);
+    const { postalCode, address } = createStoreDto;
+
+    const cleanedPostalCode = this.cleanPostalCode(postalCode);
+
+    // Requisição para ViaCep pegando os dados do cep
+    const r = axios.get(`http://viacep.com.br/ws/${cleanedPostalCode}/json/`);
+
     const newStore = new this.storeModel(createStoreDto);
     // console.log(newStore);
 
@@ -84,10 +100,7 @@ export class StoresService {
       throw new NotFoundException('Postal Code not found!');
     }
 
-    const cleanedPostalCode = postalCode.replace(/\D/g, '');
-    if (cleanedPostalCode.length != 8) {
-      throw new BadRequestException('Invalid postal code!');
-    }
+    const cleanedPostalCode = this.cleanPostalCode(postalCode);
 
     // Realizar requisição para API ViaCep
     const rPostalCode = await axios.get(
@@ -96,17 +109,50 @@ export class StoresService {
 
     const address = `${rPostalCode.data.logradouro}, ${rPostalCode.data.bairro}`;
 
-    Logger.debug(address);
+    // Realizar a requisição para a Geocoding API do Maps
+    const geo = await axios.get(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.MAPS_API_KEY}`,
+    );
 
-    // // Realizar a requisição para a Geocoding API do Maps
-    // const geo = await axios.get(
-    //   `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.MAPS_API_KEY}`,
-    // );
+    if (!geo.data.results.length || geo.data.status !== 'OK') {
+      throw new NotFoundException('Could not find geocoding data!');
+    }
 
-    // const response = {
-    //   stores,
-    //   pins,
-    // };
+    const location: PositionDto = geo.data.results[0].geometry.location;
+    const latitude = location.lat;
+    const longitude = location.lng;
+
+    // Realiza a busca de lojas dentro de um raio de 100km
+    const stores = await this.storeModel.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+          },
+          distanceField: 'distance',
+          maxDistance: 100000,
+          spherical: true,
+        },
+      },
+      {
+        $addFields: {
+          distanciaEmKm: { $round: [{ $divide: ['$distance', 1000] }, 2] },
+        },
+      },
+      {
+        $sort: { distance: 1 },
+      },
+      {
+        $project: {
+          _id: 0,
+          __v: 0,
+          distance: 0,
+        },
+      },
+    ]);
+
+    return stores;
   }
 
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
