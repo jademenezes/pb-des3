@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,6 +9,7 @@ import { Store } from './stores.schema';
 import { Model, Types } from 'mongoose';
 import { CreateStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
+import axios from 'axios';
 
 @Injectable()
 export class StoresService {
@@ -76,7 +78,36 @@ export class StoresService {
     return store;
   }
 
-  getStoresByCep() {}
+  async getStoresByPostalCode(postalCode: string) {
+    // Tratar cep recebido nos parâmetros
+    if (!postalCode) {
+      throw new NotFoundException('Postal Code not found!');
+    }
+
+    const cleanedPostalCode = postalCode.replace(/\D/g, '');
+    if (cleanedPostalCode.length != 8) {
+      throw new BadRequestException('Invalid postal code!');
+    }
+
+    // Realizar requisição para API ViaCep
+    const rPostalCode = await axios.get(
+      `http://viacep.com.br/ws/${cleanedPostalCode}/json/`,
+    );
+
+    const address = `${rPostalCode.data.logradouro}, ${rPostalCode.data.bairro}`;
+
+    Logger.debug(address);
+
+    // // Realizar a requisição para a Geocoding API do Maps
+    // const geo = await axios.get(
+    //   `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.MAPS_API_KEY}`,
+    // );
+
+    // const response = {
+    //   stores,
+    //   pins,
+    // };
+  }
 
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
   async updateOne(id: string, body: UpdateStoreDto) {
