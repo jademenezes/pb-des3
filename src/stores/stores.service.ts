@@ -10,6 +10,7 @@ import { Model, Types } from 'mongoose';
 import { CreateStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 import axios from 'axios';
+import { PositionDto } from './dtos/position.dto';
 
 @Injectable()
 export class StoresService {
@@ -98,15 +99,54 @@ export class StoresService {
 
     Logger.debug(address);
 
-    // // Realizar a requisição para a Geocoding API do Maps
-    // const geo = await axios.get(
-    //   `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.MAPS_API_KEY}`,
-    // );
+    // Realizar a requisição para a Geocoding API do Maps
+    const geo = await axios.get(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.MAPS_API_KEY}`,
+    );
 
-    // const response = {
-    //   stores,
-    //   pins,
-    // };
+    if (!geo.data.results.length || geo.data.status !== 'OK') {
+      throw new NotFoundException('Could not find geocoding data!');
+    }
+
+    const location: PositionDto = geo.data.results[0].geometry.location;
+    const latitude = location.lat;
+    const longitude = location.lng;
+
+    Logger.debug(location, latitude, longitude);
+
+    // Realiza a busca de lojas dentro de um raio de 100km
+    const stores = await this.storeModel.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+          },
+          distanceField: 'distance',
+          maxDistance: 100000,
+          spherical: true,
+        },
+      },
+      {
+        $addFields: {
+          distanciaEmKm: { $round: [{ $divide: ['$distance', 1000] }, 2] },
+        },
+      },
+      {
+        $sort: { distance: 1 },
+      },
+      {
+        $project: {
+          _id: 0,
+          __v: 0,
+          distance: 0,
+        },
+      },
+    ]);
+
+    Logger.debug(stores);
+
+    return stores;
   }
 
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
