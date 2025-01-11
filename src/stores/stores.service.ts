@@ -17,9 +17,24 @@ export class StoresService {
   // Injetar modelo Store
   constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
 
+  private cleanPostalCode(postalCode: string) {
+    const cleanedPostalCode = postalCode.replace(/\D/g, '');
+    if (cleanedPostalCode.length != 8) {
+      throw new BadRequestException('Invalid postal code!');
+    }
+
+    return cleanedPostalCode;
+  }
+
   // Método para criar uma loja no BD
   async createOne(createStoreDto: CreateStoreDto) {
-    // console.log('Service DTO:', createStoreDto);
+    const { postalCode, address } = createStoreDto;
+
+    const cleanedPostalCode = this.cleanPostalCode(postalCode);
+
+    // Requisição para ViaCep pegando os dados do cep
+    const r = axios.get(`http://viacep.com.br/ws/${cleanedPostalCode}/json/`);
+
     const newStore = new this.storeModel(createStoreDto);
     // console.log(newStore);
 
@@ -85,10 +100,7 @@ export class StoresService {
       throw new NotFoundException('Postal Code not found!');
     }
 
-    const cleanedPostalCode = postalCode.replace(/\D/g, '');
-    if (cleanedPostalCode.length != 8) {
-      throw new BadRequestException('Invalid postal code!');
-    }
+    const cleanedPostalCode = this.cleanPostalCode(postalCode);
 
     // Realizar requisição para API ViaCep
     const rPostalCode = await axios.get(
@@ -96,8 +108,6 @@ export class StoresService {
     );
 
     const address = `${rPostalCode.data.logradouro}, ${rPostalCode.data.bairro}`;
-
-    Logger.debug(address);
 
     // Realizar a requisição para a Geocoding API do Maps
     const geo = await axios.get(
@@ -111,8 +121,6 @@ export class StoresService {
     const location: PositionDto = geo.data.results[0].geometry.location;
     const latitude = location.lat;
     const longitude = location.lng;
-
-    Logger.debug(location, latitude, longitude);
 
     // Realiza a busca de lojas dentro de um raio de 100km
     const stores = await this.storeModel.aggregate([
@@ -143,8 +151,6 @@ export class StoresService {
         },
       },
     ]);
-
-    Logger.debug(stores);
 
     return stores;
   }
