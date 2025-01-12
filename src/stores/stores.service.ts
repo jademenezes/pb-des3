@@ -1,13 +1,12 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Store } from './stores.schema';
 import { Model, Types } from 'mongoose';
-import { CreateStoreDto } from './dtos/create-store.dto';
+import { CreateStoreDto, UserStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 import axios from 'axios';
 import { PositionDto } from './dtos/position.dto';
@@ -17,6 +16,7 @@ export class StoresService {
   // Injetar modelo Store
   constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
 
+  // Método que limpa o cep enviado pelo usuário
   private cleanPostalCode(postalCode: string) {
     const cleanedPostalCode = postalCode.replace(/\D/g, '');
     if (cleanedPostalCode.length != 8) {
@@ -26,17 +26,70 @@ export class StoresService {
     return cleanedPostalCode;
   }
 
-  // Método para criar uma loja no BD
-  async createOne(createStoreDto: CreateStoreDto) {
-    const { postalCode, address } = createStoreDto;
+  // Método que extrai as informações do endereço com a API ViaCep
+  private async getAddressInfo(postalCode: string, userAddress: string) {
+    const viaCepResponse = await axios.get(
+      `http://viacep.com.br/ws/${postalCode}/json/`,
+    );
 
+    const { logradouro } = viaCepResponse.data;
+
+    // Verificar se o endereço enviado é igual ao logradouro
+    const lastIndex = userAddress.lastIndexOf(' ');
+
+    if (lastIndex === -1) {
+      throw new BadRequestException('Please write a street number!');
+    }
+
+    const streetAddress = userAddress.slice(0, lastIndex);
+
+    if (streetAddress != logradouro) {
+      throw new BadRequestException('Please write the full address!');
+    }
+
+    const addressInfo = {
+      district: viaCepResponse.data.bairro,
+      city: viaCepResponse.data.localidade,
+      state: viaCepResponse.data.uf,
+    };
+
+    return addressInfo;
+  }
+
+  // Método para criar uma loja no BD
+  async createOne(userStoreData: UserStoreDto) {
+    // Tratar o cep recebido
+    const { postalCode, address } = userStoreData;
     const cleanedPostalCode = this.cleanPostalCode(postalCode);
 
-    // Requisição para ViaCep pegando os dados do cep
-    const r = axios.get(`http://viacep.com.br/ws/${cleanedPostalCode}/json/`);
+    // Extrair informaçôes do endereço
+    const addressInfo = await this.getAddressInfo(cleanedPostalCode, address);
+    const fullAddress = `${address}, ${addressInfo.district}, ${addressInfo.state}`;
+    const language = 'pt-BR';
 
-    const newStore = new this.storeModel(createStoreDto);
-    // console.log(newStore);
+    // Requisição para Maps Geocoding API para extrair os dados restantes
+    const geoResponse = await axios.get(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${fullAddress}&key=${process.env.MAPS_API_KEY}&language=${language}`,
+    );
+
+    const location = {
+      latitude: geoResponse.data.results[0].geometry.location.lat,
+      longitude: geoResponse.data.results[0].geometry.location.lng,
+    };
+
+    // Definição de dto de criação de loja
+    const newStoreData: CreateStoreDto = {
+      ...userStoreData,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      location: { coordinates: [location.longitude, location.latitude] },
+      state: addressInfo.state,
+      city: addressInfo.city,
+      country: geoResponse.data.results[0].address_components[5].long_name,
+    };
+
+    // Criação da loja no BD
+    const newStore = new this.storeModel(newStoreData);
 
     if (!newStore) {
       throw new BadRequestException('Could not create store on the database');
@@ -174,6 +227,6 @@ export class StoresService {
 
   // Método para deletar uma loja do BD
   async deleteOne(id: string) {
-    return await this.storeModel.findByIdAndDelete(id);
+    await this.storeModel.findByIdAndDelete(id);
   }
 }
