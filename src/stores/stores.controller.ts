@@ -3,13 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { StoresService } from './stores.service';
-import { CreateStoreDto } from './dtos/create-store.dto';
+import { UserStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 
 @Controller('stores')
@@ -18,7 +19,7 @@ export class StoresController {
 
   // Define a rota para a criação de uma loja
   @Post()
-  createStore(@Body() body: CreateStoreDto) {
+  createStore(@Body() body: UserStoreDto) {
     return this.storesService.createOne(body);
   }
 
@@ -48,6 +49,7 @@ export class StoresController {
 
   // Define a rota que deleta uma loja do BD
   @Delete(':id')
+  @HttpCode(204)
   deleteStore(@Param('id') id: string) {
     return this.storesService.deleteOne(id);
   }
