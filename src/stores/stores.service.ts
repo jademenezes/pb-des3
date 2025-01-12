@@ -13,7 +13,6 @@ import { PositionDto } from './dtos/position.dto';
 
 @Injectable()
 export class StoresService {
-  // Injetar modelo Store
   constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
 
   // Método que limpa o cep enviado pelo usuário
@@ -54,6 +53,51 @@ export class StoresService {
     };
 
     return addressInfo;
+  }
+
+  // Método para calcular preço de entrega dinamicamente
+  private async calculatePricing(
+    originPostalCode: string,
+    destinationPostalCode: string,
+    type: string,
+  ) {
+    if (type === 'PDV') {
+      return {
+        prazo: '1 dia útil',
+        price: 'R$ 15,00',
+        description: 'Motoboy',
+      };
+    }
+
+    if (type === 'Loja') {
+      const responseShipping = await axios.post(
+        'https://www.correios.com.br/@@precosEPrazosView',
+        {
+          cepDestino: originPostalCode,
+          cepOrigem: destinationPostalCode,
+          comprimento: '20',
+          largura: '15',
+          altura: '10',
+        },
+      );
+      const sedex = responseShipping.data[0];
+      const pac = responseShipping.data[1];
+
+      return [
+        {
+          prazo: `${sedex.prazo.split(' ', 1)} dias úteis`,
+          codProdutoAgencia: sedex.codProdutoAgencia,
+          price: sedex.precoAgencia,
+          description: sedex.urlTitulo,
+        },
+        {
+          prazo: `${pac.prazo.split(' ', 1)} dias úteis`,
+          codProdutoAgencia: pac.codProdutoAgencia,
+          price: pac.precoAgencia,
+          description: pac.urlTitulo,
+        },
+      ];
+    }
   }
 
   // Método para criar uma loja no BD
@@ -148,7 +192,8 @@ export class StoresService {
     return store;
   }
 
-  async getStoresByPostalCode(postalCode: string) {
+  // Retorna uma lista de lojas ordenadas por distância do cep recebido
+  async getStoresByPostalCode(postalCode: string, radius?: number) {
     // Tratar cep recebido nos parâmetros
     if (!postalCode) {
       throw new NotFoundException('Postal Code not found!');
@@ -176,7 +221,11 @@ export class StoresService {
     const latitude = location.lat;
     const longitude = location.lng;
 
-    // Realiza a busca de lojas dentro de um raio de 100km
+    // Realiza a busca de lojas dentro de um raio
+    if (!radius) {
+      radius = 100;
+    }
+
     const stores = await this.storeModel.aggregate([
       {
         $geoNear: {
@@ -185,13 +234,13 @@ export class StoresService {
             coordinates: [longitude, latitude],
           },
           distanceField: 'distance',
-          maxDistance: 100000,
+          maxDistance: radius * 1000,
           spherical: true,
         },
       },
       {
         $addFields: {
-          distanciaEmKm: { $round: [{ $divide: ['$distance', 1000] }, 2] },
+          distanceKm: { $round: [{ $divide: ['$distance', 1000] }, 2] },
         },
       },
       {
@@ -199,16 +248,31 @@ export class StoresService {
       },
       {
         $project: {
-          _id: 0,
-          __v: 0,
-          distance: 0,
+          name: '$storeName',
+          city: 1,
+          postalCode: 1,
+          type: 1,
+          distance: {
+            $concat: [{ $toString: 'distanceEmKm' }, ' km'],
+          },
         },
       },
     ]);
 
+    // Calcular o preço de entrega
+
     return stores;
   }
 
+  getStoreByState(state: string) {
+    const stores = this.storeModel.find({ $where: state });
+
+    if (!stores) {
+      throw new NotFoundException('Not able to find any stores in this state!');
+    }
+
+    return stores;
+  }
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
   async updateOne(id: string, body: UpdateStoreDto) {
     const updatedStore = await this.storeModel.findByIdAndUpdate(
