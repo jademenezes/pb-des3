@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { MongoError } from 'mongodb';
+import mongoose from 'mongoose';
+import { ErrorResponseDto } from 'src/stores/dtos/error-response.dto';
 
 // Filtro para tratar erros de requisição
 @Catch()
@@ -31,8 +33,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object') {
-        message = exceptionResponse['message'];
-        error = exceptionResponse['error'] || exception.name;
+        const response = exceptionResponse as {
+          message?: string;
+          error?: string;
+        };
+        message = response.message;
+        error = response.error || exception.name;
       }
     }
 
@@ -45,7 +51,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Tratando erros de validação do mongoose
-    if (exception instanceof Error && exception.name === 'ValidationError') {
+    if (exception instanceof mongoose.Error.ValidationError) {
       statusCode = 400;
       message = Object.values(exception['errors'])
         .map((err: any) => `${err.message}`)
@@ -54,7 +60,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Padronizando a resposta de erro
-    const errorResponse = {
+    const errorResponse: ErrorResponseDto = {
       statusCode,
       message,
       error,

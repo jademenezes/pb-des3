@@ -22,6 +22,7 @@ export class Store {
     type: {
       type: String,
       enum: ['Point'],
+      default: 'Point',
       required: true,
     },
     coordinates: { type: [Number], required: true },
@@ -66,6 +67,6 @@ const StoreSchema = SchemaFactory.createForClass(Store);
 StoreSchema.index({ location: '2dsphere' });
 
 // Cria um index único para cada combinação de endereço e cep no BD
-StoreSchema.index({ address1: 1, postalCode: 1 }, { unique: true });
+StoreSchema.index({ address: 1, postalCode: 1 }, { unique: true });
 
 export { StoreSchema };
