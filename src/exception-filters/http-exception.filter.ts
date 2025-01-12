@@ -8,6 +8,7 @@ import {
 import { Request, Response } from 'express';
 import { MongoError } from 'mongodb';
 import mongoose from 'mongoose';
+import { ErrorResponseDto } from 'src/stores/dtos/error-response.dto';
 
 // Filtro para tratar erros de requisição
 @Catch()
@@ -59,7 +60,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Padronizando a resposta de erro
-    const errorResponse = {
+    const errorResponse: ErrorResponseDto = {
       statusCode,
       message,
       error,

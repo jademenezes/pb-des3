@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './exception-filters/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DeliveryDto, ShippingDto } from './stores/dtos/shipping.dto';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,7 +21,9 @@ async function bootstrap() {
     .setVersion('0.1')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    extraModels: [DeliveryDto, ShippingDto],
+  });
 
   SwaggerModule.setup('api', app, document);
 
