@@ -80,6 +80,7 @@ export class StoresService {
     // Definição de dto de criação de loja
     const newStoreData: CreateStoreDto = {
       ...userStoreData,
+      postalCode: cleanedPostalCode,
       latitude: location.latitude,
       longitude: location.longitude,
       location: { coordinates: [location.longitude, location.latitude] },
