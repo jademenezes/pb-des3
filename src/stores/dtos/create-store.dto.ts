@@ -3,13 +3,14 @@ import {
   IsEmail,
   IsLatitude,
   IsLongitude,
-  IsNotEmpty,
   IsNotEmptyObject,
   IsNumber,
   IsOptional,
   IsString,
   Length,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 import { storeType } from '../enums/store-type.enums';
@@ -19,6 +20,16 @@ export class UserStoreDto {
   @MinLength(5)
   @MaxLength(50)
   storeName: string;
+
+  @IsOptional()
+  @IsBoolean()
+  takeOutInStore?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(30)
+  shippingTimeInDays?: number;
 
   @IsString()
   @MinLength(7)
