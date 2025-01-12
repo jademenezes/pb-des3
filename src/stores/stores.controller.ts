@@ -40,7 +40,7 @@ export class StoresController {
 
   // Define a rota que lista 1 loja com determinado ID
   @Get(':id')
-  getStore(@Param('id') id: string) {
+  getStoreById(@Param('id') id: string) {
     return this.storesService.getOneById(id);
   }
 

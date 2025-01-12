@@ -303,7 +303,7 @@ export class StoresService {
 
   // Método que retorna uma lista de todas as lojas em um estado
   async getStoreByState(state: string) {
-    const stores = await this.storeModel.find({ $where: state });
+    const stores = await this.storeModel.find({ state });
 
     if (!stores) {
       throw new NotFoundException('Not able to find any stores in this state!');
