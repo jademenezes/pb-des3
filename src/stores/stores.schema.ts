@@ -18,6 +18,20 @@ export class Store {
   @Prop({ required: true })
   longitude: string;
 
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+      required: true,
+    },
+    coordinates: { type: [Number], required: true },
+  })
+  location: {
+    type: string;
+    coordinates: number[];
+  };
+
   @Prop({ required: true })
   address: string;
 
@@ -48,6 +62,9 @@ export class Store {
 }
 
 const StoreSchema = SchemaFactory.createForClass(Store);
+
+// Permite o uso do operador geoNear
+StoreSchema.index({ location: '2dsphere' });
 
 // Cria um index único para cada combinação de endereço e cep no BD
 StoreSchema.index({ address1: 1, postalCode: 1 }, { unique: true });
