@@ -28,10 +28,14 @@ export class CreateStoreDto {
   @IsNumber()
   shippingTimeInDays?: number;
 
+  // API CALL
   @IsLatitude()
+  @IsOptional()
   latitude: string;
 
+  // API CALL
   @IsLongitude()
+  @IsOptional()
   longitude: string;
 
   @IsNotEmptyObject()
@@ -45,16 +49,22 @@ export class CreateStoreDto {
   @MaxLength(50)
   address: string;
 
+  // API CALL
   @IsString()
+  @IsOptional()
   city: string;
 
+  // API CALL
   @IsString()
+  @IsOptional()
   state: string;
 
   @IsString()
   type: storeType;
 
+  // API CALL
   @IsString()
+  @IsOptional()
   country: string;
 
   @IsString()
