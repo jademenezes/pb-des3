@@ -14,6 +14,34 @@ import {
 } from 'class-validator';
 import { storeType } from '../enums/store-type.enums';
 
+export class UserStoreDto {
+  @IsString()
+  @MinLength(5)
+  @MaxLength(50)
+  storeName: string;
+
+  @IsString()
+  @MinLength(7)
+  @MaxLength(50)
+  address: string;
+
+  @IsString()
+  type: storeType;
+
+  @IsString()
+  @Length(8)
+  postalCode: string;
+
+  @IsString()
+  @Length(11)
+  @IsOptional()
+  telephoneNumber: string;
+
+  @IsEmail()
+  @IsOptional()
+  emailAddress: string;
+}
+
 export class CreateStoreDto {
   @IsString()
   @MinLength(5)
@@ -28,19 +56,15 @@ export class CreateStoreDto {
   @IsNumber()
   shippingTimeInDays?: number;
 
-  // API CALL
   @IsLatitude()
-  @IsOptional()
   latitude: string;
 
-  // API CALL
   @IsLongitude()
-  @IsOptional()
   longitude: string;
 
   @IsNotEmptyObject()
   location: {
-    type: string;
+    type?: string;
     coordinates: number[];
   };
 
@@ -49,22 +73,16 @@ export class CreateStoreDto {
   @MaxLength(50)
   address: string;
 
-  // API CALL
   @IsString()
-  @IsOptional()
   city: string;
 
-  // API CALL
   @IsString()
-  @IsOptional()
   state: string;
 
   @IsString()
   type: storeType;
 
-  // API CALL
   @IsString()
-  @IsOptional()
   country: string;
 
   @IsString()
@@ -79,4 +97,10 @@ export class CreateStoreDto {
   @IsEmail()
   @IsOptional()
   emailAddress: string;
+}
+
+export class GeoResponseDto {
+  latitude: number;
+
+  longitude: number;
 }
