@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -64,7 +63,7 @@ export class StoresService {
     distanceKM: number,
     type: string,
   ) {
-    if (type === 'PDV' || (type === 'Loja' && distanceKM < 50.0)) {
+    if (type === 'PDV' || (type === 'Loja' && distanceKM < 50)) {
       return [
         {
           prazo: '1 dia útil',
@@ -74,7 +73,7 @@ export class StoresService {
       ];
     }
 
-    if (type === 'Loja' && distanceKM >= 50.0) {
+    if (type === 'Loja' && distanceKM >= 50) {
       const responseShipping = await axios.post(
         'https://www.correios.com.br/@@precosEPrazosView',
         {
@@ -265,42 +264,44 @@ export class StoresService {
     ]);
 
     // Remove PDVs acima de 50km e calcula o preço de entrega das lojas restantes
-    const cleanStores = await Promise.all(
-      stores.flatMap(async (store) => {
-        const distanceValue = parseFloat(store.distance.replace(' km', ''));
-        if (store.type === 'PDV' && distanceValue > 50.0) {
-          return null;
-        }
+    const filteredStores = await Promise.all(
+      stores
+        .flatMap(async (store) => {
+          const distanceValue = parseFloat(store.distance.replace(' km', ''));
 
-        const shippingValues = await this.calculatePricing(
-          store.postalCode,
-          cleanedPostalCode,
-          distanceValue,
-          store.type,
-        );
+          if (store.type === 'PDV' && distanceValue > 50.0) {
+            return null;
+          }
 
-        // Formata o objeto de resposta
-        return {
-          name: store.name,
-          city: store.city,
-          postalCode: store.postalCode,
-          type: store.type,
-          distance: store.distance,
-          values: shippingValues,
-        };
-      }),
+          const shippingValues = await this.calculatePricing(
+            store.postalCode,
+            cleanedPostalCode,
+            distanceValue,
+            store.type,
+          );
+
+          // Formata o objeto de resposta
+          return {
+            name: store.name,
+            city: store.city,
+            postalCode: store.postalCode,
+            type: store.type,
+            distance: store.distance,
+            values: shippingValues,
+          };
+        })
+        .filter((store) => store !== null),
     );
 
     // Filtra apenas as lojas válidas
-    const filterStore = cleanStores.filter((store) => store != null);
-
-    Logger.debug(filterStore);
+    const validStores = filteredStores.filter((store) => store !== null);
 
     return {
-      ...filterStore,
+      stores: validStores,
     };
   }
 
+  // Método que retorna uma lista de todas as lojas em um estado
   async getStoreByState(state: string) {
     const stores = await this.storeModel.find({ $where: state });
 
