@@ -44,6 +44,11 @@ export class StoresController {
     return this.storesService.getOneById(id);
   }
 
+  @Get('/state/:state')
+  getStoresByState(@Param('state') state: string) {
+    return this.storesService.getStoreByState(state);
+  }
+
   // Define a rota que atualiza as informações de uma loja
   @Patch(':id')
   updateStore(@Param('id') id: string, @Body() body: UpdateStoreDto) {
