@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -10,6 +11,7 @@ import { CreateStoreDto, UserStoreDto } from './dtos/create-store.dto';
 import { UpdateStoreDto } from './dtos/update-store.dto';
 import axios from 'axios';
 import { PositionDto } from './dtos/position.dto';
+import { StoreOutput } from './dtos/store-output.interface';
 
 @Injectable()
 export class StoresService {
@@ -59,17 +61,20 @@ export class StoresService {
   private async calculatePricing(
     originPostalCode: string,
     destinationPostalCode: string,
+    distanceKM: number,
     type: string,
   ) {
-    if (type === 'PDV') {
-      return {
-        prazo: '1 dia útil',
-        price: 'R$ 15,00',
-        description: 'Motoboy',
-      };
+    if (type === 'PDV' || (type === 'Loja' && distanceKM < 50.0)) {
+      return [
+        {
+          prazo: '1 dia útil',
+          price: 'R$ 15,00',
+          description: 'delivery',
+        },
+      ];
     }
 
-    if (type === 'Loja') {
+    if (type === 'Loja' && distanceKM >= 50.0) {
       const responseShipping = await axios.post(
         'https://www.correios.com.br/@@precosEPrazosView',
         {
@@ -226,7 +231,7 @@ export class StoresService {
       radius = 100;
     }
 
-    const stores = await this.storeModel.aggregate([
+    const stores = await this.storeModel.aggregate<StoreOutput>([
       {
         $geoNear: {
           near: {
@@ -240,7 +245,7 @@ export class StoresService {
       },
       {
         $addFields: {
-          distanceKm: { $round: [{ $divide: ['$distance', 1000] }, 2] },
+          distanceKm: { $round: [{ $divide: ['$distance', 1000] }, 1] },
         },
       },
       {
@@ -253,19 +258,51 @@ export class StoresService {
           postalCode: 1,
           type: 1,
           distance: {
-            $concat: [{ $toString: 'distanceEmKm' }, ' km'],
+            $concat: [{ $toString: '$distanceKm' }, ' km'],
           },
         },
       },
     ]);
 
-    // Calcular o preço de entrega
+    // Remove PDVs acima de 50km e calcula o preço de entrega das lojas restantes
+    const cleanStores = await Promise.all(
+      stores.flatMap(async (store) => {
+        const distanceValue = parseFloat(store.distance.replace(' km', ''));
+        if (store.type === 'PDV' && distanceValue > 50.0) {
+          return null;
+        }
 
-    return stores;
+        const shippingValues = await this.calculatePricing(
+          store.postalCode,
+          cleanedPostalCode,
+          distanceValue,
+          store.type,
+        );
+
+        // Formata o objeto de resposta
+        return {
+          name: store.name,
+          city: store.city,
+          postalCode: store.postalCode,
+          type: store.type,
+          distance: store.distance,
+          values: shippingValues,
+        };
+      }),
+    );
+
+    // Filtra apenas as lojas válidas
+    const filterStore = cleanStores.filter((store) => store != null);
+
+    Logger.debug(filterStore);
+
+    return {
+      ...filterStore,
+    };
   }
 
-  getStoreByState(state: string) {
-    const stores = this.storeModel.find({ $where: state });
+  async getStoreByState(state: string) {
+    const stores = await this.storeModel.find({ $where: state });
 
     if (!stores) {
       throw new NotFoundException('Not able to find any stores in this state!');
