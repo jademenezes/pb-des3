@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -11,6 +12,11 @@ import { UpdateStoreDto } from './dtos/update-store.dto';
 import axios from 'axios';
 import { PositionDto } from './dtos/position.dto';
 import { StoreOutput } from './dtos/store-output.interface';
+import {
+  GetStoreResponseDto,
+  ListAllResponseDto,
+  StoreByCepResponseDto,
+} from './dtos/store-response.dto';
 
 @Injectable()
 export class StoresService {
@@ -137,6 +143,8 @@ export class StoresService {
       country: geoResponse.data.results[0].address_components[5].long_name,
     };
 
+    Logger.debug(newStoreData);
+
     // Criação da loja no BD
     const newStore = new this.storeModel(newStoreData);
 
@@ -165,13 +173,16 @@ export class StoresService {
     const total = await this.storeModel.countDocuments();
 
     // Busca a lista lojas do BD
-    const stores = await this.storeModel.find().skip(offset).limit(limit);
+    const stores: CreateStoreDto[] = await this.storeModel
+      .find()
+      .skip(offset)
+      .limit(limit);
 
     if (!stores) {
       throw new NotFoundException('Could not find stores on the database');
     }
 
-    const response = {
+    const response: ListAllResponseDto = {
       stores,
       limit,
       page,
@@ -187,7 +198,7 @@ export class StoresService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format!');
     }
-    const store = await this.storeModel.findById(id);
+    const store: GetStoreResponseDto = await this.storeModel.findById(id);
 
     if (!store) {
       throw new NotFoundException('Could not find a store with this ID!');
@@ -294,7 +305,9 @@ export class StoresService {
     );
 
     // Filtra apenas as lojas válidas
-    const validStores = filteredStores.filter((store) => store !== null);
+    const validStores: StoreByCepResponseDto[] = filteredStores.filter(
+      (store) => store !== null,
+    );
 
     return {
       stores: validStores,
