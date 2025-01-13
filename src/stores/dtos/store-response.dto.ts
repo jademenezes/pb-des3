@@ -36,7 +36,6 @@ export class StoreByCepResponseDto {
   name: string;
 
   @ApiProperty()
-  @ApiProperty()
   city: string;
 
   @ApiProperty()

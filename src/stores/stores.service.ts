@@ -110,6 +110,25 @@ export class StoresService {
     }
   }
 
+  private async addPagination(setLimit: number, setPage: number) {
+    // Organiza valores de paginação
+    if (!setLimit) {
+      setLimit = 1;
+    }
+
+    if (!setPage) {
+      setPage = 1;
+    }
+    setLimit = Math.max(1, setLimit);
+    setPage = Math.max(1, setPage);
+    const offset = (setPage - 1) * setLimit;
+
+    // Retorna o total de documentos no BD
+    const total = await this.storeModel.countDocuments();
+
+    return { setLimit, setPage, offset, total };
+  }
+
   // Método para criar uma loja no BD
   async createOne(userStoreData: UserStoreDto) {
     // Tratar o cep recebido
@@ -156,27 +175,18 @@ export class StoresService {
   }
 
   // Retorna uma lista com todas as lojas no BD
-  async getAll(limit: number, page: number) {
-    // Organiza valores de paginação
-    if (!limit) {
-      limit = 1;
-    }
-
-    if (!page) {
-      page = 1;
-    }
-    limit = Math.max(1, limit);
-    page = Math.max(1, page);
-    const offset = (page - 1) * limit;
-
-    // Retorna o total de documentos no BD
-    const total = await this.storeModel.countDocuments();
+  async getAll(limit?: number, page?: number) {
+    // Adiciona paginação
+    const { setLimit, setPage, offset, total } = await this.addPagination(
+      limit,
+      page,
+    );
 
     // Busca a lista lojas do BD
     const stores: CreateStoreDto[] = await this.storeModel
       .find()
       .skip(offset)
-      .limit(limit);
+      .limit(setLimit);
 
     if (!stores) {
       throw new NotFoundException('Could not find stores on the database');
@@ -184,8 +194,8 @@ export class StoresService {
 
     const response: ListAllResponseDto = {
       stores,
-      limit,
-      page,
+      limit: setLimit,
+      page: setPage,
       total,
     };
 
@@ -193,18 +203,33 @@ export class StoresService {
   }
 
   // Retorna uma loja com determinada ID
-  async getOneById(id: string) {
+  async getOneById(id: string, limit?: number, page?: number) {
     // Verifica se o parâmetro ID enviado é em um formato válido para MongoDB
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ID format!');
     }
-    const store: GetStoreResponseDto = await this.storeModel.findById(id);
 
-    if (!store) {
+    // Adiciona paginação
+    const { setLimit, setPage, offset, total } = await this.addPagination(
+      limit,
+      page,
+    );
+    const stores = await this.storeModel
+      .findById(id)
+      .skip(offset)
+      .limit(setLimit);
+
+    if (!stores) {
       throw new NotFoundException('Could not find a store with this ID!');
     }
 
-    return store;
+    const response: GetStoreResponseDto = {
+      stores,
+      limit: setLimit,
+      page: setPage,
+      total,
+    };
+    return response;
   }
 
   // Retorna uma lista de lojas ordenadas por distância do cep recebido
@@ -323,14 +348,30 @@ export class StoresService {
   }
 
   // Método que retorna uma lista de todas as lojas em um estado
-  async getStoreByState(state: string) {
-    const stores = await this.storeModel.find({ state });
+  async getStoreByState(state: string, page?: number, limit?: number) {
+    // Adiciona paginação
+    const { setLimit, setPage, offset, total } = await this.addPagination(
+      page,
+      limit,
+    );
+
+    const stores: CreateStoreDto[] = await this.storeModel
+      .find({ state })
+      .skip(offset)
+      .limit(setLimit);
 
     if (!stores) {
       throw new NotFoundException('Not able to find any stores in this state!');
     }
 
-    return stores;
+    const response: ListAllResponseDto = {
+      stores,
+      limit: setLimit,
+      page: setPage,
+      total,
+    };
+
+    return response;
   }
   // Atualiza as informações de uma loja com determinada ID baseado nos valores que são recebidos do body
   async updateOne(id: string, body: UpdateStoreDto) {

@@ -64,7 +64,7 @@ export class StoresController {
 
   // Define a rota para buscar as lojas em um raio de 100KM de um determinado CEP
   @ApiQuery({ name: 'radius', required: false })
-  @ApiOkResponse({ type: StoreByCepResponseDto })
+  @ApiOkResponse({ type: [StoreByCepResponseDto] })
   @ApiNotFoundResponse({ description: 'Not Found' })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiOperation({ summary: 'Busca uma lista de lojas ordenadas por distância' })
@@ -81,8 +81,12 @@ export class StoresController {
   @ApiOkResponse({ type: ListAllResponseDto })
   @ApiNotFoundResponse({ description: 'Not Found' })
   @Get('/state/:state')
-  getStoresByState(@Param('state') state: string) {
-    return this.storesService.getStoreByState(state);
+  getStoresByState(
+    @Param('state') state: string,
+    @Query('limit') limit: number,
+    @Query('page') page: number,
+  ) {
+    return this.storesService.getStoreByState(state, limit, page);
   }
 
   // Define a rota que atualiza as informações de uma loja
