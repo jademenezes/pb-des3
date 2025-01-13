@@ -1,0 +1,43 @@
+### Create Store
+POST http://localhost:8000/stores
+Content-Type: application/json
+
+{
+     "storeName": "Filipinas Shopping Pelotas Pelotas",
+     "address": "Avenida Ferreira Viana 1526",
+     "type": "PDV",
+     "postalCode": "96085-000",
+     "telephoneNumber": "51999999999"
+}
+
+
+### Get All Stores
+GET http://localhost:8000/stores?limit=100
+
+### Get Store ID (IGUATEMI SP)
+GET http://localhost:8000/stores/678422fd520ab45560507e0f
+
+### Get Store State
+GET http://localhost:8000/stores/state/SP?limit=5
+
+### Update Store
+PATCH http://localhost:8000/stores/6784aec05fd552131526c625
+Content-Type: application/json
+
+{
+     "storeName": "Filipinas Iguatemi Porto Alegre"
+}
+
+### Delete Store
+DELETE http://localhost:8000/stores/677f28d0bc56b24a719176cf
+
+
+
+### CEP Araras PDV - 50 / Loja - 50 / Loja + 50
+GET http://localhost:8000/stores/cep/13600-226
+
+### CEP Vila jaguara PDV + 50
+GET http://localhost:8000/stores/cep/05301-040?radius=150
+
+###
+
