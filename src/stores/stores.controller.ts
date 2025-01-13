@@ -78,6 +78,8 @@ export class StoresController {
 
   // Define a rota que retorna uma lista de todas as lojas de um determinado estado
   @ApiOperation({ summary: 'Busca uma lista de lojas em um estado' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'page', required: false })
   @ApiOkResponse({ type: ListAllResponseDto })
   @ApiNotFoundResponse({ description: 'Not Found' })
   @Get('/state/:state')
