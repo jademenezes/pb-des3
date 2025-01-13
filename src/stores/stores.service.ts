@@ -309,8 +309,16 @@ export class StoresService {
       (store) => store !== null,
     );
 
+    // Separa os pins de lat e lon para cada loja
+    const pins = validStores.map((store) => ({
+      latitude,
+      longitude,
+      storeName: store.name,
+    }));
+
     return {
       stores: validStores,
+      pins,
     };
   }
 
