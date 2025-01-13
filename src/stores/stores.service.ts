@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -38,6 +37,10 @@ export class StoresService {
       `http://viacep.com.br/ws/${postalCode}/json/`,
     );
 
+    if (viaCepResponse.data.erro === 'true') {
+      throw new NotFoundException('Invalid postal code!');
+    }
+    console.log(viaCepResponse);
     const { logradouro } = viaCepResponse.data;
 
     // Verificar se o endereço enviado é igual ao logradouro
@@ -70,10 +73,21 @@ export class StoresService {
     type: string,
   ) {
     if (type === 'PDV' || (type === 'Loja' && distanceKM < 50)) {
+      let prazo: string;
+      let basePrice: number;
+      if (distanceKM < 10) {
+        prazo = 'Até 3 horas!';
+        basePrice = 10.0;
+      } else {
+        const days = Math.max(1, Math.trunc(distanceKM / 20));
+        prazo = `${days} dias úteis`;
+        basePrice = 10 + 2 * days;
+      }
+
       return [
         {
-          prazo: '1 dia útil',
-          price: 'R$ 15,00',
+          prazo,
+          price: `R$ ${basePrice.toFixed(2)}`,
           description: 'delivery',
         },
       ];
@@ -123,10 +137,7 @@ export class StoresService {
     setPage = Math.max(1, setPage);
     const offset = (setPage - 1) * setLimit;
 
-    // Retorna o total de documentos no BD
-    const total = await this.storeModel.countDocuments();
-
-    return { setLimit, setPage, offset, total };
+    return { setLimit, setPage, offset };
   }
 
   // Método para criar uma loja no BD
@@ -162,8 +173,6 @@ export class StoresService {
       country: geoResponse.data.results[0].address_components[5].long_name,
     };
 
-    Logger.debug(newStoreData);
-
     // Criação da loja no BD
     const newStore = new this.storeModel(newStoreData);
 
@@ -177,10 +186,7 @@ export class StoresService {
   // Retorna uma lista com todas as lojas no BD
   async getAll(limit?: number, page?: number) {
     // Adiciona paginação
-    const { setLimit, setPage, offset, total } = await this.addPagination(
-      limit,
-      page,
-    );
+    const { setLimit, setPage, offset } = await this.addPagination(limit, page);
 
     // Busca a lista lojas do BD
     const stores: CreateStoreDto[] = await this.storeModel
@@ -192,6 +198,7 @@ export class StoresService {
       throw new NotFoundException('Could not find stores on the database');
     }
 
+    const total = stores.length;
     const response: ListAllResponseDto = {
       stores,
       limit: setLimit,
@@ -210,11 +217,8 @@ export class StoresService {
     }
 
     // Adiciona paginação
-    const { setLimit, setPage, offset, total } = await this.addPagination(
-      limit,
-      page,
-    );
-    const stores = await this.storeModel
+    const { setLimit, setPage, offset } = await this.addPagination(limit, page);
+    const stores: CreateStoreDto = await this.storeModel
       .findById(id)
       .skip(offset)
       .limit(setLimit);
@@ -222,6 +226,8 @@ export class StoresService {
     if (!stores) {
       throw new NotFoundException('Could not find a store with this ID!');
     }
+
+    const total = stores ? 1 : 0;
 
     const response: GetStoreResponseDto = {
       stores,
@@ -334,6 +340,9 @@ export class StoresService {
       (store) => store !== null,
     );
 
+    if (validStores.length === 0) {
+      throw new NotFoundException('Not able to find stores next to you!');
+    }
     // Separa os pins de lat e lon para cada loja
     const pins = validStores.map((store) => ({
       latitude,
@@ -350,10 +359,7 @@ export class StoresService {
   // Método que retorna uma lista de todas as lojas em um estado
   async getStoreByState(state: string, page?: number, limit?: number) {
     // Adiciona paginação
-    const { setLimit, setPage, offset, total } = await this.addPagination(
-      page,
-      limit,
-    );
+    const { setLimit, setPage, offset } = await this.addPagination(page, limit);
 
     const stores: CreateStoreDto[] = await this.storeModel
       .find({ state })
@@ -364,6 +370,7 @@ export class StoresService {
       throw new NotFoundException('Not able to find any stores in this state!');
     }
 
+    const total = stores.length;
     const response: ListAllResponseDto = {
       stores,
       limit: setLimit,

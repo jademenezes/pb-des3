@@ -68,7 +68,7 @@ export class StoresController {
   @ApiNotFoundResponse({ description: 'Not Found' })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiOperation({ summary: 'Busca uma lista de lojas ordenadas por distância' })
-  @Get(':postalCode')
+  @Get('/cep/:postalCode')
   storesByCep(
     @Param('postalCode') postalCode: string,
     @Query('radius') radius: number,
