@@ -198,7 +198,7 @@ export class StoresService {
       throw new NotFoundException('Could not find stores on the database');
     }
 
-    const total = stores.length;
+    const total = await this.storeModel.countDocuments();
     const response: ListAllResponseDto = {
       stores,
       limit: setLimit,
